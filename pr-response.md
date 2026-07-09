@@ -20,29 +20,71 @@ For the function`add_to_watchlist()` in `watchlist_service.py`, I added a separa
         if entry:
             raise AlreadyPresentinWatchListError(f"Film {film_id} is already present in this user's watchlist")
     ```
-I added the Exception class for `AlreadyPresentinWatchListError` at the beginning of the file, making sure to refer to `add_to_collection` to comply with project naming conventions consistently.
+I added the Exception class for `AlreadyPresentinWatchListError` at the beginning of the file.
+<!-- > and modified `add_film` in route `watchlist.py` to call `add_to_watchlist` in a try except block, referring to `add_to_collection` and `collections.py`to comply with project naming conventions consistently. -->
 
 **How I verified:**
-I restarted the app to make sure it's running.
+I restarted the app to make sure it's running first. 
 
 ## Comment 3 — Missing test
 **What I did:**
+
+I added a new file `test_watchlist.py` under `tests` and included 3 tests for `add_to_watchlist()`:
+
+1. `test_add_to_watchlist_creates_entry`: Does the basic check for the entry being present in the DB after operation.
+2. `test_add_to_watchlist_duplicate_raises`: Makes 2 duplicate calls and checks if the second call throws an error, rather than duplicate the entry.
+3.  `test_add_to_watchlist_nonexistent_film_raises`: This is the missing test, which checks if a non existent film raises an exception.
+
+I added 2 and 3 to keep my tests consistent with what was present in `test_collection.py` and test for the change I made under Comment 2.
+
 **How I verified:**
+I ran `pytests/tests` for the file and for all tests regressively to make sure nothing broke.
 
 ## Comment 4 — Default visibility
 **My position:**
+My initial thought was to make the visibility as default to True however, upon reviewing it, my proposed alternative is to also allow the user to set the visibility when they want to. Specifically when calling `add_to_watchlist()`, a parameter called `public` which allows `True` or `False` can be set by the user, which gets passed from the main request through `add_film` in route `watchlist.py` as a HTTP query parameter. There will still be a default option in the case that the user does not set any value, which is `False` rather than `True`.
+
 **Reasoning:**
+My initial reasoning to keep the default as `True` was to help users know what kinds of films are trending by allowing them to share their watchlists with others, like how Spotify allows public playlists. Cinelog is primarily a community forward app and providing public watchlists is part of the collaboration experience that film lovers seek where they can get films that are popular as well as niche, indie or unique films that cater to certain groups.
+
+However, I do acknowledge that not all communities may prefer to have their watchlist public all the time and may want to keep it private to themselves or within certain groups. Watchlists indicate a user's preference, which can indicate sensitive and personal information in cases where a playlist only lists horror, gore or slasher films or only lists R-rated romantic, sexual or other mature films, which may not be suitable for all users to view. A solution to satisfy both can be to let the user make the decision instead and when the user doesn't set anything, it can be set to `False` instead, as it's a safer option in the case that the user did not want the watchlist to be public yet, or the watchlist should not have been public yet. This avoids any backlash from these situations.
+
 **Tradeoff acknowledged:**
+Not defaulting public to True in the case when the user doesn't set a value can fragment the community to have public, private groups and users and could undermine the purpose of community sharing. 
+
+Also, providing the choice to the user also means handling cases where public can be changed from True to False and False to True, which adds extra complexity in how these requests get handled. For simplicity in this PR, we can do a simple toggle assignment, but future work could add additional user warnings and validations so that the changes that go in are intentional.
+
+These tradeoffs can change as the community evolves and it's important to constantly monitor how the app is being used. For future work, we can setup metrics in a dashboard that captures number of public vs private watchlists, engagement with public and private watchlists etc.
 
 ## Comment 5 — Sort order
 **My position:**
+I initially decided to use the Title of the show for sorting the watchlist, upon reviewing the comment to use `date_added` instead in the descending order, I reflected on this and decided to use `date_added` as a first choice.
 **Reasoning:**
+In the initial decision, using Title provided a more natural ordering format that allows for easier searching and viewing by a fellow app user. However, watchlists are usually more closer to the user that created it and the most recent entries can reflect what they would want to watch first. As a first sort order, `date_added` in the descending order is a better choice than Title, however future work can allow for sorting with Title, Genre through a sort filter which the user can select later on.
+
 **Engagement with reviewer's point:**
+Agreed to use `date_added` as a first choice.
 
 ## Comment 6 — Rebase
 **What conflicted:**
 **How I resolved it:**
 **How I verified no conflict remains:**
+
+## Additional Test: Add additional tests for `add_to_watchlist()`
+
+Refer Comment 2 for details.
+
+## Additional Feature: remove_from_watchlist()
+
+**What I did:**
+**How I verified:**
+
+## Additional Fix: Add a visibility toggle to add_to_watchlist()
+
+As part of Comment 4
+**What I did:**
+**How I verified:**
+
 
 ## PR Description
 <!-- Written at the end — feature overview, design decisions, manual testing steps -->
