@@ -26,13 +26,33 @@ def add_film(user_id):
     Body: { "film_id": <int> }
     """
     data = request.get_json()
+    public = data.get("public", None)
     if not data or "film_id" not in data:
         return jsonify({"error": "film_id is required"}), 400
     try:
-        entry = add_to_watchlist(user_id=user_id, film_id=data["film_id"])
+        if public is None:
+            public = False
+        entry = add_to_watchlist(user_id=user_id, film_id=data["film_id"], public = public)
     except FilmNotFoundError as e:
         return jsonify({"error": str(e)}), 404
     except AlreadyPresentinWatchListError as e:
         return jsonify({"error": str(e)}), 409
 
     return jsonify(entry.to_dict()), 201
+
+@watchlist_bp.route("/<user_id>/remove", methods=["DELETE"])
+def remove_film(user_id):
+    """
+    DELETE /watchlist/<user_id>/remove
+
+    Body: { "film_id": "<uuid>" }
+    """
+    data = request.get_json()
+    if not data or "film_id" not in data:
+        return jsonify({"error": "film_id is required"}), 400
+
+    try:
+        remove_from_watchlist(user_id=user_id, film_id=data["film_id"])
+        return jsonify({"message": "Removed from watchlist"}), 200
+    except NotInWatchlistError as e:
+        return jsonify({"error": str(e)}), 404
