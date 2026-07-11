@@ -1,7 +1,11 @@
 # PR Response Doc — CineLog Watchlist Feature
 
 ## AI Usage
-<!-- Fill in at the end — how you used AI tools during this project -->
+I used Claude Code for the following:
+1. Debugging test issues.
+2. Setting up new tests for the fixes and features.
+3. Querying how SQLAlchemy queries are setup (as I am more familiar with SQL queries than ORM queries)
+4. Tested my responses to Comment 4 and 5 against it.
 
 ## Comment 1 — Rename
 **What I did:**
@@ -89,7 +93,15 @@ Refer Comment 2 for details.
 ## Additional Feature: remove_from_watchlist()
 
 **What I did:**
+
+I added a new function `remove_from_watchlist()` to `watchlist_service.py` and a new route `remove_film` to `watchlist.py`, following the existing implementation of `remove_from_collection` in `collection_service.py` and `remove_film` in `collection.py` for Collections.
+
 **How I verified:**
+I added new tests for the function:
+
+`test_remove_from_watchlist_removes_entry`: Checks if the entry is fully removed.
+`test_remove_from_watchlist_not_present_raises`: Raises NotInWatchlistError when there is nothing to remove.
+`test_remove_from_watchlist_only_removes_target_entry`: Only removes the specific entry without disturbing other entries.
 
 ## Additional Fix: Add a visibility toggle to add_to_watchlist()
 
