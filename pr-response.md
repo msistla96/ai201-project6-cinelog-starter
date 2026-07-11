@@ -3,7 +3,7 @@
 ## AI Usage
 I used Claude Code for the following:
 1. Debugging test issues.
-2. Setting up new tests for the fixes and features.
+2. Setting up new tests for the fixes and features. I edited  as it worked with 
 3. Querying how SQLAlchemy queries are setup (as I am more familiar with SQL queries than ORM queries)
 4. Tested my responses to Comment 4 and 5 against it.
 
@@ -140,4 +140,173 @@ I updated the tests under `test_watchlist.py` to validate the following:
 
 
 ## PR Description
-<!-- Written at the end — feature overview, design decisions, manual testing steps -->
+
+### Overview
+This PR adds the watchlist feature to CineLog: users can save films they want to watch later (`add_to_watchlist`), view their watchlist sorted by most recently added (`get_watchlist`), and remove films from it (`remove_from_watchlist`). A user can also set their watchlist entry to be public or private, defaulting to private if there's no user input.
+
+### Endpoints
+- `GET /watchlist/<user_id>` — returns the user's watchlist, most recently added film first.
+- `POST /watchlist/<user_id>/add` — body `{ "film_id": <int>, "public": <bool, optional> }`. Adds a film to the watchlist.
+- `DELETE /watchlist/<user_id>/remove` — body `{ "film_id": <int> }`. Removes a film from the watchlist.
+
+### Design decisions
+**Comment 4 — Default visibility**: `public` defaults to `False` (private) when the user doesn't set it, prioritizing safety for potentially sensitive viewing preferences over discoverability. See Comment 4 for the full reasoning and acknowledged tradeoffs (this may undercut the community-discovery angle of public watchlists, and toggling visibility adds request-handling complexity).
+**Comment 4 — sort order**: watchlist entries are sorted by `date_added` descending (most recent first) rather than by film title. See Comment 5 for the full reasoning; Title/Genre-based sort filters are left as future work.
+
+### Manual testing steps
+
+There are two paths to testing
+
+#### Unit Testing
+Run the test suite: `pytest tests/test_watchlist.py -v` — all tests should pass.
+
+#### User Testing
+To test the actual APIs:
+
+1. Start the app on the CLI with 
+    ``` sh
+    export FLASK_APP=app:create_app 
+    export FLASK_DEBUG=1
+    flask run --port=8000
+    ```
+    FLASK_DEBUG=1 shows up any errors when sending a request.
+
+2. Run `python -m scripts.seed_sample_data` to seed the database before testing the watchlist feature.
+3. **Add a film (default visibility)** — expect 201 and `"public": false`:
+    ``` sh
+    curl -s -X POST http://localhost:8000/watchlist/9df00460-8dc7-444d-aef6-53c407ff69c9/add \
+      -H "Content-Type: application/json" \
+      -d '{"film_id": 1}' | python3 -m json.tool
+    ```
+    ``` json
+    {
+        "date_added": "2026-07-11T03:53:52.643482",
+        "film_id": 1,
+        "id": "d84c6f57-e6f8-47a7-adb2-ba24c0ff1481",
+        "public": false,
+        "user_id": "9df00460-8dc7-444d-aef6-53c407ff69c9"
+    }
+    ```
+4. **Add a film with explicit visibility** (different film) — expect 201 with `"public": true`:
+    ``` sh
+    curl -s -X POST http://localhost:8000/watchlist/9df00460-8dc7-444d-aef6-53c407ff69c9/add \
+      -H "Content-Type: application/json" \
+      -d '{"film_id": 2, "public": true}' | python3 -m json.tool
+    ```
+    ``` json
+    {
+        "date_added": "2026-07-11T03:55:25.581590",
+        "film_id": 2,
+        "id": "b36b7ab5-6135-44b2-ba64-818bddb9d565",
+        "public": true,
+        "user_id": "9df00460-8dc7-444d-aef6-53c407ff69c9"
+    }
+    ```
+5. **Duplicate add, same visibility** — expect 409 with an `AlreadyPresentinWatchlistError` message, and no duplicate entry created:
+    ``` sh
+    curl -i -s -X POST http://localhost:8000/watchlist/9df00460-8dc7-444d-aef6-53c407ff69c9/add \
+      -H "Content-Type: application/json" \
+      -d '{"film_id": 1}' | tail -5
+    ```
+    ``` json
+    {
+      "error": "Film 1 is already present in this user's watchlist"
+    }
+    ```
+6. **Duplicate add, different visibility** — expect 201 and the existing entry's `public` updated to `true`, not a new entry:
+    ``` sh
+    curl -s -X POST http://localhost:8000/watchlist/9df00460-8dc7-444d-aef6-53c407ff69c9/add \
+      -H "Content-Type: application/json" \
+      -d '{"film_id": 1, "public": true}' | python3 -m json.tool
+    ```
+    ``` json
+    {
+        "date_added": "2026-07-11T03:53:52.643482",
+        "film_id": 1,
+        "id": "d84c6f57-e6f8-47a7-adb2-ba24c0ff1481",
+        "public": true,
+        "user_id": "9df00460-8dc7-444d-aef6-53c407ff69c9"
+    }
+    ```
+7. **Nonexistent film** — expect 404 with a `FilmNotFoundError` message:
+    ``` sh
+    curl -i -s -X POST http://localhost:8000/watchlist/9df00460-8dc7-444d-aef6-53c407ff69c9/add \
+      -H "Content-Type: application/json" \
+      -d '{"film_id": 999999}' | tail -5
+    ```
+    ``` json
+    {
+      "error": "No film found with id '999999'"
+    }
+    ```
+8. **View watchlist ordering** — confirm the most recently added film appears first, regardless of title:
+    ``` sh
+    curl -s http://localhost:8000/watchlist/9df00460-8dc7-444d-aef6-53c407ff69c9 | python3 -m json.tool
+    ```
+    ``` json
+    [
+        {
+            "average_rating": 0.0,
+            "date_added": "2026-07-11T03:55:25.581590",
+            "director": "Wes Anderson",
+            "genre": "Comedy",
+            "id": 2,
+            "poster_url": null,
+            "public": true,
+            "title": "The Grand Budapest Hotel",
+            "year": 2014
+        },
+        {
+            "average_rating": 0.0,
+            "date_added": "2026-07-11T03:53:52.643482",
+            "director": "Paul King",
+            "genre": "Comedy",
+            "id": 1,
+            "poster_url": null,
+            "public": true,
+            "title": "Paddington 2",
+            "year": 2017
+        }
+    ]
+    ```
+9. **Remove a film** — expect 200, and it no longer appears in the watchlist:
+    ``` sh
+    curl -s -X DELETE http://localhost:8000/watchlist/9df00460-8dc7-444d-aef6-53c407ff69c9/remove \
+      -H "Content-Type: application/json" \
+      -d '{"film_id": 2}' | python3 -m json.tool
+    ```
+    ``` json
+    {
+        "message": "Removed from watchlist"
+    }
+    ```
+10. **Remove a film not on the watchlist** — expect 404 with a `NotInWatchlistError` message:
+    ``` sh
+    curl -i -s -X DELETE http://localhost:8000/watchlist/9df00460-8dc7-444d-aef6-53c407ff69c9/remove \
+      -H "Content-Type: application/json" \
+      -d '{"film_id": 2}' | tail -5
+    ```
+    ``` json
+    {
+      "error": "Film '2' is not in this user's watchlist"
+    }
+    ```
+11. **Confirm final watchlist state**:
+    ``` sh
+    curl -s http://localhost:8000/watchlist/9df00460-8dc7-444d-aef6-53c407ff69c9 | python3 -m json.tool
+    ```
+    ``` json
+    [
+        {
+            "average_rating": 0.0,
+            "date_added": "2026-07-11T03:53:52.643482",
+            "director": "Paul King",
+            "genre": "Comedy",
+            "id": 1,
+            "poster_url": null,
+            "public": true,
+            "title": "Paddington 2",
+            "year": 2017
+        }
+    ]
+    ```
