@@ -8,7 +8,11 @@ from app import db
 from models import Film, WatchlistEntry
 from services.collection_service import FilmNotFoundError
 
-class AlreadyPresentinWatchListError(Exception):
+class AlreadyPresentinWatchlistError(Exception):
+    """Raised when a film_id already exists in WatchList."""
+    pass
+
+class NotInWatchlistError(Exception):
     """Raised when a film_id already exists in WatchList."""
     pass
 
@@ -34,7 +38,7 @@ def add_to_watchlist(user_id, film_id, public=False):
     entry = WatchlistEntry.query.filter_by(user_id=user_id, film_id = film_id).first()
     if entry:
         if public == entry.public:
-            raise AlreadyPresentinWatchListError(f"Film {film_id} is already present in this user's watchlist")
+            raise AlreadyPresentinWatchlistError(f"Film {film_id} is already present in this user's watchlist")
         else:
             entry.public = public
     else:
@@ -70,3 +74,28 @@ def get_watchlist(user_id):
         result.append(film_dict)
 
     return result
+
+def remove_from_watchlist(user_id, film_id):
+    """
+    Remove a film from a user's collection.
+
+    Args:
+        user_id (str): UUID of the user.
+        film_id (str): UUID of the film.
+
+    Returns:
+        bool: True if the entry was removed.
+
+    Raises:
+        NotInCollectionError: If the film is not in the user's collection.
+    """
+    entry = WatchlistEntry.query.filter_by(user_id=user_id, film_id = film_id).first()
+    if entry is None:
+        raise NotInWatchlistError(
+            f"Film '{film_id}' is not in this user's watchlist"
+        )
+
+    db.session.delete(entry)
+    db.session.commit()
+    return True
+
