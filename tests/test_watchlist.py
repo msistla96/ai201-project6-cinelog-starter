@@ -69,24 +69,60 @@ def test_add_to_watchlist_creates_entry(app, sample_user, sample_film):
         assert in_db is not None
 
 
-# ── Deduplication ────────────────────────────────────────────────────────────
+# ── Default visibility ───────────────────────────────────────────────────────
 
-def test_add_to_watchlist_duplicate_raises(app, sample_user, sample_film):
+def test_add_to_watchlist_defaults_to_private(app, sample_user, sample_film):
     """
-    Adding the same film twice should raise AlreadyPresentinWatchListError,
-    not silently create a duplicate entry.
+    Omitting the `public` argument should default the entry to private (False).
     """
     with app.app_context():
-        add_to_watchlist(user_id=sample_user, film_id=sample_film)
+        entry = add_to_watchlist(user_id=sample_user, film_id=sample_film)
+
+        assert entry.public is False
+
+
+# ── Deduplication ────────────────────────────────────────────────────────────
+
+def test_add_to_watchlist_duplicate_same_visibility_raises(app, sample_user, sample_film):
+    """
+    Adding the same film twice with the same `public` value should raise
+    AlreadyPresentinWatchListError, not silently create a duplicate entry.
+    """
+    with app.app_context():
+        add_to_watchlist(user_id=sample_user, film_id=sample_film, public=False)
 
         with pytest.raises(AlreadyPresentinWatchListError):
-            add_to_watchlist(user_id=sample_user, film_id=sample_film)
+            add_to_watchlist(user_id=sample_user, film_id=sample_film, public=False)
 
         # Confirm only one entry exists
         count = WatchlistEntry.query.filter_by(
             user_id=sample_user, film_id=sample_film
         ).count()
         assert count == 1
+
+
+def test_add_to_watchlist_duplicate_different_visibility_updates_entry(
+    app, sample_user, sample_film
+):
+    """
+    Adding the same film again with a different `public` value should update
+    the existing entry's visibility rather than raising or creating a
+    duplicate row.
+    """
+    with app.app_context():
+        first = add_to_watchlist(user_id=sample_user, film_id=sample_film, public=False)
+
+        updated = add_to_watchlist(user_id=sample_user, film_id=sample_film, public=True)
+
+        assert updated.id == first.id
+        assert updated.public is True
+
+        # Confirm still only one entry exists, and it reflects the new value
+        entries = WatchlistEntry.query.filter_by(
+            user_id=sample_user, film_id=sample_film
+        ).all()
+        assert len(entries) == 1
+        assert entries[0].public is True
 
 
 # ── Nonexistent film ─────────────────────────────────────────────────────────
