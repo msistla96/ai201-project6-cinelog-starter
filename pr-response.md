@@ -65,6 +65,18 @@ In the initial decision, using Title provided a more natural ordering format tha
 **Engagement with reviewer's point:**
 Agreed to use `date_added` as a first choice.
 
+**What I did:**
+
+Modify Line 61 in `get_watchlist.py` in `watchlist_service.py` to use `date_added` as sort order:
+    WatchlistEntry.date_added.desc()
+
+**How I verified:**
+I added a test to `test_watchlist.py` called `test_get_watchlist_orders_by_date_added_descending` which checks the sort order to be by the date_added column. This test failed with an error:
+     AttributeError: 'WatchlistEntry' object has no attribute 'film'
+After some debugging, the reason was that `WatchlistEntry` in `models.py` needed a relationship to Film in order to access the film element, which was currently not available. I added the following relationship to `WatchlistEntry`:
+    film = db.relationship("Film", lazy=True)
+The test passed after this change. 
+
 ## Comment 6 — Rebase
 **What conflicted:**
 **How I resolved it:**
@@ -83,7 +95,36 @@ Refer Comment 2 for details.
 
 As part of Comment 4
 **What I did:**
+I added an extra parameter to `add_to_watchlist()` under `watch_service` called `public` which can be set to True or False and set by the user through the router `add_film()` in `watchlist.py`, for which I added an extra parameter check for public.
+
+`add_film()`
+
+    ``` python
+            public = data["public"] if data["public"] is not None else False
+            entry = add_to_watchlist(user_id=user_id, film_id=data["film_id"], public = public)
+        except FilmNotFoundError as e:
+            return jsonify({"error": str(e)}), 404
+        except AlreadyPresentinWatchListError as e:
+            return jsonify({"error": str(e)}), 409
+    ```
+
+`add_to_watchlist()`
+    ``` python
+    if entry:
+            if public == entry.public:
+                raise AlreadyPresentinWatchListError(f"Film {film_id} is already present in this user's watchlist")
+            else:
+                entry.public = public
+        else:
+            entry = WatchlistEntry(user_id=user_id, film_id=film_id, public = public)
+            db.session.add(entry)
+        db.session.commit()
+    ```
 **How I verified:**
+I updated the tests under `test_watchlist.py` to validate the following:
+1. Public is set to False by default without user input.
+2. When Public is set to a different value, it updates the existing entry in the watchlist, instead of duplicating.
+3. When Public has not changed and there is a duplicate film being added, it raises an error.
 
 
 ## PR Description
