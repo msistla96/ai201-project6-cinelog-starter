@@ -5,12 +5,15 @@ Tests for the watchlist service, following the patterns established in
 tests/test_collection.py.
 """
 
+from datetime import datetime, timedelta, timezone
+
 import pytest
 from app import create_app, db
 from models import User, Film, WatchlistEntry
 from services.collection_service import FilmNotFoundError
 from services.watchlist_service import (
     add_to_watchlist,
+    get_watchlist,
     AlreadyPresentinWatchListError,
 )
 
@@ -123,6 +126,32 @@ def test_add_to_watchlist_duplicate_different_visibility_updates_entry(
         ).all()
         assert len(entries) == 1
         assert entries[0].public is True
+
+
+# ── Ordering ─────────────────────────────────────────────────────────────────
+
+def test_get_watchlist_orders_by_date_added_descending(app, sample_user):
+    """
+    get_watchlist should return entries ordered by date_added descending
+    (most recently added film first), even when that contradicts title order.
+    """
+    with app.app_context():
+        film_a = Film(title="Older Film", year=2000, genre="Drama")
+        film_b = Film(title="Newer Film", year=2010, genre="Drama")
+        db.session.add_all([film_a, film_b])
+        db.session.commit()
+
+        base_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
+
+        entry_a = add_to_watchlist(user_id=sample_user, film_id=film_a.id)
+        entry_a.date_added = base_time
+        entry_b = add_to_watchlist(user_id=sample_user, film_id=film_b.id)
+        entry_b.date_added = base_time + timedelta(days=1)
+        db.session.commit()
+
+        result = get_watchlist(sample_user)
+
+        assert [film["title"] for film in result] == ["Newer Film", "Older Film"]
 
 
 # ── Nonexistent film ─────────────────────────────────────────────────────────
