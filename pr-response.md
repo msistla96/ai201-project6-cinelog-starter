@@ -179,29 +179,29 @@ I also verified this via Steps 3, 5, and 6 (Add a film, Duplicate add same visib
 
 ## Git commit log
 ``` bash
-    34f983b (HEAD) docs: Clean up documentation
-    95de752 docs: Update information for Comment 6: Rebase and modified PR Description to use updated Film IDs for testing
-    8b351b8 fix: modify film id in WatchlistEntry to match refactored id in Film
-    343c017 docs: Update pr-response.md to include PR Description; modify Manual Testing to include unit, regression and user testing in separate modules
-    29c115b chore: Add script for seeding database
-    70b9963 docs: Modify AI Usage section
-    7a8bf96 docs: Add information for remove_to_watchlist and add_to_watchlist
-    c37ea70 test: Add tests for remove_to_watchlist
-    b190d9f feat: add new function remove_from_watchlist to allow removing a film from the watchlist
-    f5dfa78 docs: Update Comment 5 to add details about the changes done and verified
-    85cd4c2 test: Add new test for get_watchlist
-    906c5ae fix: Use date_added to sort Watchlist Entries based on Comment 5
-    3d50fc1 test: Add tests for toggle feature
-    745d01b feat: add toggle to add_to_watchlist for making watchlist private or public and update add_film route to parse public for Comment 4: Default visibility
-    e9e6232 docs: Add visibility and sort order decisions
-    137e3f2 docs: Added informaton about Comment 3: Missing test
-    197927f test: Added missing test for non existent film id when adding to watchlist; added additional tests
-    d1ba5e9 docs: Added informaton about Comment 2: Deduplication; Refactored Comment 1
-    13560cd fix: add deduplication in add_to_watchlist and add try block in add_film route for new check for Comment 2: Deduplication
-    897ca50 docs: Add details about Comment 1: Renaming
-    e4c92bc fix: rename save_to_watchlist to add_to_watchlist
-    b1ab57f fix: update film retrieval method to use db.session.get in collection and watchlist services
-    18fc6e0 added watchlist model and endpoint fixed a bug more changes
+    a18dfc7 (HEAD -> feature/watchlist) docs: update information for Comment 6, modify PR Description and clean up documentation
+    20cde6e fix: modify film id in WatchlistEntry to match refactored id in Film
+    ea2ea06 docs: Update pr-response.md to include PR Description; modify Manual Testing to include unit, regression and user testing in separate modules
+    618a14f chore: Add script for seeding database
+    2886ecf docs: add information for remove_to_watchlist and add_to_watchlist and modify AI Usage section
+    59a63c3 test: Add tests for remove_to_watchlist
+    2b34d45 feat: add new function remove_from_watchlist to allow removing a film from the watchlist
+    73d0753 docs: Update Comment 5 to add details about the changes done and verified
+    ef0fad7 test: Add new test for get_watchlist
+    4b7a72b fix: Use date_added to sort Watchlist Entries based on Comment 5
+    5d016d3 test: Add tests for toggle feature
+    e850663 feat: add toggle to add_to_watchlist for making watchlist private or public and update add_film route to parse public for Comment 4: Default visibility
+    0a80be1 docs: add informaton about Comment 3: Missing test, visibility and sort order decisions
+    a1d053c test: Added missing test for non existent film id when adding to watchlist; added additional tests
+    9c74046 docs: Added informaton about Comment 2: Deduplication; Refactored Comment 1
+    9d1b261 fix: add deduplication in add_to_watchlist and add try block in add_film route for new check for Comment 2: Deduplication
+    ae982ba docs: Add details about Comment 1: Renaming
+    00ab6d5 fix: rename save_to_watchlist to add_to_watchlist
+    2f25e52 fix: update film retrieval method to use db.session.get in collection and watchlist services
+    819762f feat: add watchlist model and endpoint
+    718a9a8 chore: add .gitignore for generated files
+    07ca580 refactor: migrate film IDs from integer to UUID
+    014ae54 feat: initial CineLog API with film collection feature
 ```
 ## PR Description
 
